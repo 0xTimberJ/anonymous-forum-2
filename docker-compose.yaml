@@ -10,6 +10,7 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=postgresql://postgres:unVraiMotDePasseUltraSolide@postgres:5432/forum
+      - FRONTEND_URL=http://frontend:3000
     networks:
       - internal
   postgres:
@@ -28,6 +29,17 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - internal
+  thread:
+    build:
+      context: ./thread
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:3001
     networks:
       - internal
 volumes:

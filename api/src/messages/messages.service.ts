@@ -16,6 +16,10 @@ export class MessagesService {
   }
 
   async findAll(): Promise<Message[]> {
-    return this.messagesRepository.find();
+    const messages = await this.messagesRepository.find();
+    console.log('messages', messages);
+    return messages.sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+    );
   }
 }

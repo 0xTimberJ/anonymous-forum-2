@@ -38,8 +38,6 @@ services:
       - "3000:3000"
     environment:
       - API_URL=http://api:3001
-    networks:
-      - internal
 volumes:
   postgres-data:
 networks:

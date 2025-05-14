@@ -1,4 +1,3 @@
-version: "3.8"
 services:
   api:
     image: ghcr.io/mindsek/anonymous-forum-2/api:latest
@@ -42,7 +41,7 @@ services:
   sender:
     image: ghcr.io/mindsek/anonymous-forum-2/sender:latest
     ports:
-      - "3002:3000"
+      - "3002:3002"
     environment:
       - API_URL=http://api:3001
     depends_on:

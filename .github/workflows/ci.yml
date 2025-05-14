@@ -42,12 +42,20 @@ jobs:
         working-directory: ./thread
         run: pnpm install
 
+      - name: Install dependencies (sender)
+        working-directory: ./sender
+        run: pnpm install
+
       - name: Run lint (api)
         working-directory: ./api
         run: pnpm run lint
 
       - name: Run lint (thread)
         working-directory: ./thread
+        run: pnpm run lint
+
+      - name: Run lint (sender)
+        working-directory: ./sender
         run: pnpm run lint
 
   build-and-push:
@@ -79,5 +87,12 @@ jobs:
         working-directory: ./thread
         run: |
           IMAGE_NAME=$(echo "ghcr.io/${{ github.repository }}/thread" | tr '[:upper:]' '[:lower:]')
+          docker build -t ${IMAGE_NAME}:${{ github.sha }} -t ${IMAGE_NAME}:latest .
+          docker push ${IMAGE_NAME} --all-tags
+
+      - name: Build and push Sender image
+        working-directory: ./sender
+        run: |
+          IMAGE_NAME=$(echo "ghcr.io/${{ github.repository }}/sender" | tr '[:upper:]' '[:lower:]')
           docker build -t ${IMAGE_NAME}:${{ github.sha }} -t ${IMAGE_NAME}:latest .
           docker push ${IMAGE_NAME} --all-tags

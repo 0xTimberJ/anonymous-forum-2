@@ -54,6 +54,7 @@ export default function MessageForm() {
       form.reset();
       router.refresh();
     } catch (error) {
+      console.error("Erreur lors de l'envoi du message:", error);
       toast.error("Une erreur est survenue lors de l'envoi du message");
     }
   }

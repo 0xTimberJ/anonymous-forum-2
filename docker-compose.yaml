@@ -1,8 +1,7 @@
+version: "3.8"
 services:
   api:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
+    image: ghcr.io/${YOUR_GITHUB_USERNAME}/anonymous-forum-2/api:latest
     ports:
       - "3001:3001"
     depends_on:
@@ -10,7 +9,8 @@ services:
         condition: service_healthy
     environment:
       - DATABASE_URL=postgresql://postgres:unVraiMotDePasseUltraSolide@postgres:5432/forum
-      - FRONTEND_URL=http://frontend:3000
+    networks:
+      - internal
   postgres:
     image: postgres:latest
     restart: always
@@ -27,20 +27,28 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - internal
   thread:
-    build:
-      context: ./thread
+    image: ghcr.io/${YOUR_GITHUB_USERNAME}/anonymous-forum-2/thread:latest
     ports:
-      - "3000:3000"
+      - "80:3000"
     environment:
       - API_URL=http://api:3001
+    depends_on:
+      - api
+    networks:
+      - internal
   sender:
-    build:
-      context: ./sender
+    image: ghcr.io/mindsek/anonymous-forum-2/sender:latest
     ports:
-      - "3002:3002"
+      - "8080:3000"
     environment:
       - API_URL=http://api:3001
+    depends_on:
+      - api
+    networks:
+      - internal
 volumes:
   postgres-data:
 networks:

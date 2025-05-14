@@ -1,6 +1,8 @@
 import MessageForm from "@/components/message-form";
 import { getMessages } from "./actions/messages";
 
+export const dynamic = "force-dynamic";
+
 export default async function Home() {
   const messages = await getMessages();
   console.log(messages);

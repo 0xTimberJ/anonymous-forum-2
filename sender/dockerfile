@@ -1,0 +1,45 @@
+# --- Build stage ---
+    FROM node:22-alpine AS build
+
+    WORKDIR /app
+    
+    # Install corepack et pnpm
+    RUN npm i -g corepack@latest && corepack enable pnpm
+    
+    # Copie package.json d'abord pour le cache
+    COPY package*.json ./
+    
+    # Install deps (dev inclus pour build)
+    RUN pnpm install
+    
+    # Copie tout le code
+    COPY . .
+    
+    # Build Next.js
+    RUN pnpm build
+    
+    # --- Production stage ---
+    FROM node:22-alpine AS prod
+    
+    WORKDIR /app
+    
+    # Install corepack et pnpm
+    RUN npm i -g corepack@latest && corepack enable pnpm
+    
+    # Copie seulement le build et les deps prod
+    COPY --from=build /app/.next ./.next
+    COPY --from=build /app/public ./public
+    COPY --from=build /app/node_modules ./node_modules
+    COPY --from=build /app/package*.json ./
+    COPY --from=build /app/next.config.ts ./next.config.ts
+    
+    # Expose le port
+    EXPOSE 3002
+    ENV PORT=3002
+    ENV HOSTNAME="0.0.0.0"
+    
+    # User non-root (optionnel, mais conseillé)
+    USER node
+    
+    CMD ["pnpm", "run", "start"]
+    

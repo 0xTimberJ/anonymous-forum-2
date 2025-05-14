@@ -1,0 +1,139 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  validate-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies (root)
+        run: pnpm install
+
+      - name: Install dependencies (api)
+        working-directory: ./api
+        run: pnpm install
+
+      - name: Install dependencies (thread)
+        working-directory: ./thread
+        run: pnpm install
+
+      - name: Run lint (api)
+        working-directory: ./api
+        run: pnpm run lint
+
+      - name: Run lint (thread)
+        working-directory: ./thread
+        run: pnpm run lint
+
+      - name: Run tests (api)
+        working-directory: ./api
+        run: pnpm test
+
+  build-images:
+    runs-on: ubuntu-latest
+    needs: validate-and-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        working-directory: ./api
+        run: |
+          docker build -t ci-cd-api:${{ github.sha }} .
+
+      - name: Build Thread image
+        working-directory: ./thread
+        run: |
+          docker build -t ci-cd-thread:${{ github.sha }} .
+
+  deploy-images:
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        working-directory: ./api
+        run: |
+          IMAGE_NAME=$(echo "ghcr.io/${{ github.repository }}/api" | tr '[:upper:]' '[:lower:]')
+          docker build -t ${IMAGE_NAME}:${{ github.sha }} -t ${IMAGE_NAME}:latest .
+          docker push ${IMAGE_NAME} --all-tags
+
+      - name: Build and push Thread image
+        working-directory: ./thread
+        run: |
+          IMAGE_NAME=$(echo "ghcr.io/${{ github.repository }}/thread" | tr '[:upper:]' '[:lower:]')
+          docker build -t ${IMAGE_NAME}:${{ github.sha }} -t ${IMAGE_NAME}:latest .
+          docker push ${IMAGE_NAME} --all-tags
+
+  release:
+    runs-on: ubuntu-latest
+    needs: deploy-images
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Generate changelog and tag release
+        run: pnpm release
+
+      - name: Push changelog and tag
+        run: |
+          git push --follow-tags

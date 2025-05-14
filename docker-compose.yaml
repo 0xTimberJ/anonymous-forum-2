@@ -1,7 +1,7 @@
 version: "3.8"
 services:
   api:
-    image: ghcr.io/${YOUR_GITHUB_USERNAME}/anonymous-forum-2/api:latest
+    image: ghcr.io/mindsek/anonymous-forum-2/api:latest
     ports:
       - "3001:3001"
     depends_on:
@@ -30,7 +30,7 @@ services:
     networks:
       - internal
   thread:
-    image: ghcr.io/${YOUR_GITHUB_USERNAME}/anonymous-forum-2/thread:latest
+    image: ghcr.io/mindsek/anonymous-forum-2/thread:latest
     ports:
       - "80:3000"
     environment:

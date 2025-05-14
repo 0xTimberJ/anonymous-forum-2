@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const messages = await getMessages();
-  console.log(messages);
+  console.log("messages", messages);
 
   return (
     <div className="p-4">

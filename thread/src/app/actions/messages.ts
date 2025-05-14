@@ -12,6 +12,7 @@ export async function getMessages() {
     return res.json();
   } catch (error) {
     console.error(error);
+    return [];
   }
 }
 

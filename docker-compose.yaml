@@ -11,8 +11,6 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:unVraiMotDePasseUltraSolide@postgres:5432/forum
       - FRONTEND_URL=http://frontend:3000
-    networks:
-      - internal
   postgres:
     image: postgres:latest
     restart: always
@@ -29,8 +27,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - internal
   thread:
     build:
       context: ./thread

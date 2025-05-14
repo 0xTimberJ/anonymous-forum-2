@@ -32,7 +32,7 @@ services:
   thread:
     image: ghcr.io/mindsek/anonymous-forum-2/thread:latest
     ports:
-      - "80:3000"
+      - "3000:3000"
     environment:
       - API_URL=http://api:3001
     depends_on:
@@ -42,7 +42,7 @@ services:
   sender:
     image: ghcr.io/mindsek/anonymous-forum-2/sender:latest
     ports:
-      - "8080:3000"
+      - "3002:3000"
     environment:
       - API_URL=http://api:3001
     depends_on:

@@ -1,59 +1,103 @@
 "use client";
 
 import { sendMessage } from "@/app/actions/messages";
-import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+
+const formSchema = z.object({
+  pseudonym: z.string().min(2, {
+    message: "Le pseudonyme doit contenir au moins 2 caractères.",
+  }),
+  content: z.string().min(5, {
+    message: "Le message doit contenir au moins 5 caractères.",
+  }),
+});
 
 export default function MessageForm() {
-  const [pseudonym, setPseudonym] = useState("");
-  const [content, setContent] = useState("");
-  const [message, setMessage] = useState("");
+  const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      pseudonym: "",
+      content: "",
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
-      const formData = new FormData(e.target as HTMLFormElement);
-      console.log(
-        "sendMessage",
-        formData.get("pseudonym"),
-        formData.get("content")
-      );
-      await sendMessage(formData);
-      setMessage("Message envoyé !");
-      setPseudonym("");
-      setContent("");
-      // Optionnel: window.location.reload() pour refetch SSR
-    } catch {
-      setMessage("Erreur lors de l'envoi.");
+      const formData = new FormData();
+      formData.append("pseudonym", values.pseudonym);
+      formData.append("content", values.content);
+
+      toast.promise(sendMessage(formData), {
+        loading: "Envoi en cours...",
+        success: "Message envoyé avec succès!",
+        error: "Erreur lors de l'envoi du message",
+      });
+
+      form.reset();
+      router.refresh();
+    } catch (error) {
+      toast.error("Une erreur est survenue lors de l'envoi du message");
     }
-  };
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 mb-8">
-      <div>
-        <label className="block">Pseudonyme :</label>
-        <input
-          type="text"
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <FormField
+          control={form.control}
           name="pseudonym"
-          value={pseudonym}
-          onChange={(e) => setPseudonym(e.target.value)}
-          className="border p-2 w-full"
-          required
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Pseudonyme</FormLabel>
+              <FormControl>
+                <Input placeholder="Votre pseudonyme" {...field} />
+              </FormControl>
+              <FormDescription>
+                Choisissez un pseudonyme pour identifier votre message.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <div>
-        <label className="block">Message :</label>
-        <textarea
+        <FormField
+          control={form.control}
           name="content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          className="border p-2 w-full"
-          required
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Message</FormLabel>
+              <FormControl>
+                <Textarea
+                  placeholder="Partagez votre message..."
+                  className="min-h-[120px] resize-none"
+                  {...field}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
         />
-      </div>
-      <button type="submit" className="bg-blue-500 text-white p-2 rounded">
-        Envoyer
-      </button>
-      {message && <p className="mb-4">{message}</p>}
-    </form>
+        <Button type="submit" className="w-full">
+          Envoyer le message
+        </Button>
+      </form>
+    </Form>
   );
 }

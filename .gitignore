@@ -1,0 +1,12 @@
+# Ignore node_modules everywhere
+node_modules/
+
+# Ignore build artifacts
+dist/
+build/
+
+# Ignore Docker-related files
+docker-compose.yml.bak
+
+# Ignore environment files
+.env

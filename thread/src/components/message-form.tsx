@@ -11,7 +11,13 @@ export default function MessageForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await sendMessage(new FormData(e.target as HTMLFormElement));
+      const formData = new FormData(e.target as HTMLFormElement);
+      console.log(
+        "sendMessage",
+        formData.get("pseudonym"),
+        formData.get("content")
+      );
+      await sendMessage(formData);
       setMessage("Message envoyé !");
       setPseudonym("");
       setContent("");

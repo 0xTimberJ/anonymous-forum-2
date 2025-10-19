@@ -1,12 +1,17 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
-    branches:
-      - master
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      destroy:
+        description: "Destroy infrastructure"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -14,6 +19,7 @@ permissions:
 
 jobs:
   lint:
+    name: Linting API
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -31,37 +37,22 @@ jobs:
           node-version: "20"
           cache: "pnpm"
 
-      - name: Install dependencies (root)
+      - name: Install root dependencies
         run: pnpm install
 
-      - name: Install dependencies (api)
+      - name: Install API dependencies
         working-directory: ./api
         run: pnpm install
 
-      - name: Install dependencies (thread)
-        working-directory: ./thread
-        run: pnpm install
-
-      - name: Install dependencies (sender)
-        working-directory: ./sender
-        run: pnpm install
-
-      - name: Run lint (api)
+      - name: Run lint (API)
         working-directory: ./api
-        run: pnpm run lint
-
-      - name: Run lint (thread)
-        working-directory: ./thread
-        run: pnpm run lint
-
-      - name: Run lint (sender)
-        working-directory: ./sender
         run: pnpm run lint
 
   build-and-push:
-    runs-on: ubuntu-latest
+    name: Build and Push API Image
     needs: lint
-    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -83,45 +74,57 @@ jobs:
           docker build -t ${IMAGE_NAME}:${{ github.sha }} -t ${IMAGE_NAME}:latest .
           docker push ${IMAGE_NAME} --all-tags
 
-      - name: Build and push Thread image
-        working-directory: ./thread
-        run: |
-          IMAGE_NAME=$(echo "ghcr.io/${{ github.repository }}/thread" | tr '[:upper:]' '[:lower:]')
-          docker build -t ${IMAGE_NAME}:${{ github.sha }} -t ${IMAGE_NAME}:latest .
-          docker push ${IMAGE_NAME} --all-tags
-
-      - name: Build and push Sender image
-        working-directory: ./sender
-        run: |
-          IMAGE_NAME=$(echo "ghcr.io/${{ github.repository }}/sender" | tr '[:upper:]' '[:lower:]')
-          docker build -t ${IMAGE_NAME}:${{ github.sha }} -t ${IMAGE_NAME}:latest .
-          docker push ${IMAGE_NAME} --all-tags
-
-  deploy-vps:
-    runs-on: ubuntu-latest
+  deploy:
+    name: Deploy to AWS
     needs: build-and-push
-    if: github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Copy docker-compose.yml to VPS
-        uses: appleboy/scp-action@master
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.yml"
-          target: "~/project/anonymous-forum-2/"
+          terraform_version: 1.5.0
 
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@master
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve -var="github_token=${{ secrets.GITHUB_TOKEN }}"
+        working-directory: terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+  destroy:
+    name: Destroy Infrastructure
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.destroy == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v2
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd ~/project/anonymous-forum-2
-            docker-compose down
-            docker-compose pull
-            docker-compose up -d
+          terraform_version: 1.5.0
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve -var="github_token=${{ secrets.GITHUB_TOKEN }}"
+        working-directory: terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

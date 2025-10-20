@@ -206,6 +206,7 @@ COMPOSE_EOF
 
   tags = {
     Name = "api-instance"
+    Version = timestamp()
   }
 }
 

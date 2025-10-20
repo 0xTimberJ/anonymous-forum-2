@@ -74,8 +74,19 @@ jobs:
           docker build -t ${IMAGE_NAME}:${{ github.sha }} -t ${IMAGE_NAME}:latest .
           docker push ${IMAGE_NAME} --all-tags
 
-  # Deploy is managed by Terraform Cloud via VCS workflow
-  # Terraform Cloud will automatically plan/apply on pushes to master
-
-  # To destroy: use Terraform Cloud UI or create a destroy queue manually
-  # VCS-driven workspaces don't support CLI-triggered destroys
+  # ==============================================================================
+  # DEPLOYMENT via Terraform Cloud (VCS-Driven Workflow)
+  # ==============================================================================
+  # Le déploiement est géré par Terraform Cloud, PAS par GitHub Actions.
+  #
+  # Workflow:
+  #   1. Cette CI build et push l'image Docker vers GHCR
+  #   2. Terraform Cloud détecte automatiquement les push sur master
+  #   3. TF Cloud génère un plan et attend validation manuelle
+  #   4. Après validation, TF Cloud applique les changements sur AWS
+  #
+  # State Management: Le terraform.tfstate est stocké sur Terraform Cloud
+  # Workspace: https://app.terraform.io/app/forum-anonymous/workspaces/anonymous-forum-2
+  #
+  # Pour destroy: Settings → Destruction and Deletion → Queue destroy plan
+  # ==============================================================================

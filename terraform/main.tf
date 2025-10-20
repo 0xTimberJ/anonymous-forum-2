@@ -195,18 +195,32 @@ services:
       - DATABASE_URL=postgresql://postgres:unVraiMotDePasseUltraSolide@${aws_instance.postgres_instance.private_ip}:5432/forum
     networks:
       - internal
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+  
+  watchtower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/ec2-user/.docker/config.json:/config.json
+    environment:
+      - WATCHTOWER_POLL_INTERVAL=60
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_LABEL_ENABLE=true
+    command: --interval 60
+    networks:
+      - internal
 networks:
   internal:
     driver: bridge
 COMPOSE_EOF
     
     cd /home/ec2-user
-    docker-compose up -d api
+    docker-compose up -d
     EOF
 
   tags = {
     Name = "api-instance"
-    Version = timestamp()
   }
 }
 

@@ -1,3 +1,20 @@
+terraform {
+  cloud {
+    organization = "forum-anonymous"
+    
+    workspaces {
+      name = "anonymous-forum-2"
+    }
+  }
+  
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
 # Configure the AWS provider
 provider "aws" {
   region = "eu-central-1"
